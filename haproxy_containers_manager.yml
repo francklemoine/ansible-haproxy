@@ -1,0 +1,10 @@
+---
+
+# tags:
+#   haproxy_configure:     haproxy -> configure proxy
+
+
+- name: HAProxy
+  hosts: haproxy
+  roles:
+    - haproxy

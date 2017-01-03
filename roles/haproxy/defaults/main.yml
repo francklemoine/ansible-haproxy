@@ -1,0 +1,12 @@
+---
+# default
+#
+haproxy_project_name: haproxy
+haproxy_container: haproxy
+haproxy_prefix: /usr/local/etc/haproxy
+haproxy_conf_files: [ 'haproxy.cfg' ]
+#
+haproxy:
+  stats:
+    user: username
+    password: password

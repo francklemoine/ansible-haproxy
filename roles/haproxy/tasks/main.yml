@@ -1,0 +1,54 @@
+---
+
+- assert:
+    that:
+      - 'haproxy_project_name != ""'
+  tags:
+    - all
+
+
+- assert:
+    that:
+      - 'haproxy_prefix    != ""'
+      - 'haproxy_container != ""'
+  tags:
+    - haproxy_configure
+
+
+################################################################################
+########## HAPROXY
+################################################################################
+- name: copy haproxy file (conf)
+  template:
+    src: "../templates/{{ item }}"
+    dest: "/tmp/{{ item }}"
+  with_items:
+    - "{{ haproxy_conf_files }}"
+  tags:
+    - haproxy_configure
+
+
+- name: configure haproxy (conf)
+  command: "docker cp /tmp/{{ item }} {{ haproxy_container }}:{{ haproxy_prefix }}/"
+  with_items:
+    - "{{ haproxy_conf_files }}"
+  tags:
+    - haproxy_configure
+
+
+- name: remove haproxy files (conf)
+  file:
+    path: "/tmp/{{ item }}"
+    state: absent
+  with_items:
+    - "{{ haproxy_conf_files }}"
+  tags:
+    - haproxy_configure
+
+
+- name: restart haproxy service
+  service:
+    name: "{{ haproxy_project_name }}"
+    state: restarted
+  tags:
+    - haproxy_configure

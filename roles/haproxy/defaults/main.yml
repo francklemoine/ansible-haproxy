@@ -4,9 +4,29 @@
 haproxy_project_name: haproxy
 haproxy_container: haproxy
 haproxy_prefix: /usr/local/etc/haproxy
-haproxy_conf_files: [ 'haproxy.cfg' ]
+#haproxy_conf_files: [ 'haproxy.cfg' ]
+haproxy_conf_files:
+  - { src: 'haproxy.j2', dest: 'haproxy.cfg' }
 #
 haproxy:
   stats:
     user: username
     password: password
+  sites:
+    - id: "00"
+      name: foo
+      url: www.domain1.tld
+      crt: /path/to/certificate
+      target_addr: server1
+      target_port: "80"
+    - id: "01"
+      name: bar
+      url: www.domain2.tld
+      crt: /path/to/certificate
+      target_addr: server2
+      target_port: "80"
+  sshs:
+    - id: "02"
+      bind_port: "8022"
+      target_addr: server3
+      target_port: "22"

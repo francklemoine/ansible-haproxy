@@ -1,0 +1,86 @@
+global
+	log 127.0.0.1   local0
+	log 127.0.0.1   local1 notice
+	maxconn 4096
+	#debug
+	quiet
+	uid 0
+	gid 0
+	daemon
+	tune.ssl.default-dh-param 2048   # certificat de 2048 (1024 par défaut)
+
+
+defaults
+	log     global
+	mode    http
+	option  httplog
+	option  dontlognull
+	option  forwardfor
+	option  http-server-close
+	timeout connect 5000ms
+	timeout client 50000ms
+	timeout server 50000ms
+	errorfile 400 /usr/local/etc/haproxy/errors/400.http
+	errorfile 403 /usr/local/etc/haproxy/errors/403.http
+	errorfile 408 /usr/local/etc/haproxy/errors/408.http
+	errorfile 500 /usr/local/etc/haproxy/errors/500.http
+	errorfile 502 /usr/local/etc/haproxy/errors/502.http
+	errorfile 503 /usr/local/etc/haproxy/errors/503.http
+	errorfile 504 /usr/local/etc/haproxy/errors/504.http
+	stats enable
+	stats auth {{ haproxy.stats.user }}:{{ haproxy.stats.password }}
+	stats refresh 5s
+	stats uri /stats
+
+
+frontend http-in
+	bind *:80
+
+	# Define hosts based on domain names
+{% for site in haproxy.sites %}
+	acl acl_{{ site.id }} hdr(host) -i {{ site.url }}
+{% endfor %}
+
+	## figure out backend to use based on domainname
+	redirect scheme https code 301 if !{ ssl_fc } {% for site in haproxy.sites %}acl_{{ site.id }}{% if not loop.last %} or {% endif %}{% endfor %}
+
+
+frontend https-in
+	mode http
+	option httplog
+	bind 0.0.0.0:443 ssl {% for site in haproxy.sites %}crt {{ site.crt }} {% endfor %}no-sslv3
+
+{% for site in haproxy.sites %}
+	use_backend {{ site.name }}{{ site.id }} if { ssl_fc_sni {{ site.url }} } # content switching based on SNI
+{% endfor %}
+
+
+{% for site in haproxy.sites %}
+backend {{ site.name }}{{ site.id }}
+	mode http
+	option httplog
+	balance roundrobin
+	option http-keep-alive
+	option httpchk
+	no option httpclose
+	no option accept-invalid-http-response
+	option forwardfor except 127.0.0.1
+	server srv{{ site.id }} {{ site.target_addr }}:{{ site.target_port }} maxconn 32
+
+
+{% endfor %}
+{% for ssh in haproxy.sshs %}
+frontend sshd{{ ssh.id }}
+	mode tcp
+	option tcplog
+	bind *:{{ ssh.bind_port }}
+	default_backend ssh{{ ssh.id }}
+	timeout client 1h
+
+
+backend ssh{{ ssh.id }}
+	mode tcp
+	option tcplog
+	timeout server 2h
+	server srv{{ ssh.id }} {{ ssh.target_addr }}:{{ ssh.target_port }}
+{% endfor %}

@@ -20,16 +20,15 @@
 ################################################################################
 - name: copy haproxy file (conf)
   template:
-    src: "../templates/{{ item }}"
-    dest: "/tmp/{{ item }}"
-  with_items:
-    - "{{ haproxy_conf_files }}"
+    src: "../templates/{{ item.src }}"
+    dest: "/tmp/{{ item.dest }}"
+  with_items: "{{ haproxy_conf_files }}"
   tags:
     - haproxy_configure
 
 
 - name: configure haproxy (conf)
-  command: "docker cp /tmp/{{ item }} {{ haproxy_container }}:{{ haproxy_prefix }}/"
+  command: "docker cp /tmp/{{ item.dest }} {{ haproxy_container }}:{{ haproxy_prefix }}/"
   with_items:
     - "{{ haproxy_conf_files }}"
   tags:
@@ -38,7 +37,7 @@
 
 - name: remove haproxy files (conf)
   file:
-    path: "/tmp/{{ item }}"
+    path: "/tmp/{{ item.dest }}"
     state: absent
   with_items:
     - "{{ haproxy_conf_files }}"

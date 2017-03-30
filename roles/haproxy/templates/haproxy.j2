@@ -36,13 +36,21 @@ defaults
 frontend http-in
 	bind *:80
 
+	acl letsencrypt-acl path_beg /.well-known/acme-challenge/
+	use_backend letsencrypt if letsencrypt-acl
+
 	# Define hosts based on domain names
 {% for site in haproxy.sites %}
 	acl acl_{{ site.id }} hdr(host) -i {{ site.url }}
 {% endfor %}
 
 	## figure out backend to use based on domainname
+{#
 	redirect scheme https code 301 if !{ ssl_fc } {% for site in haproxy.sites %}acl_{{ site.id }}{% if not loop.last %} or {% endif %}{% endfor %}
+#}
+{% for site in haproxy.sites %}
+	redirect scheme https code 301 if !{ ssl_fc } !letsencrypt-acl acl_{{ site.id }}
+{% endfor %}
 
 
 frontend https-in
@@ -53,6 +61,11 @@ frontend https-in
 {% for site in haproxy.sites %}
 	use_backend {{ site.name }}{{ site.id }} if { ssl_fc_sni {{ site.url }} } # content switching based on SNI
 {% endfor %}
+
+
+backend letsencrypt
+	mode http
+	server srvletsencrypt letsencryptserver:80 maxconn 8
 
 
 {% for site in haproxy.sites %}

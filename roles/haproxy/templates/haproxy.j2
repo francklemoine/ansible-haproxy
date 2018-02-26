@@ -9,6 +9,12 @@ global
 	daemon
 	tune.ssl.default-dh-param 2048   # certificat de 2048 (1024 par défaut)
 
+	# Default ciphers to use on SSL-enabled listening sockets.
+	# For more information, see ciphers(1SSL). This list is from:
+	#  https://hynek.me/articles/hardening-your-web-servers-ssl-ciphers/
+	ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
+	ssl-default-bind-options no-sslv3
+
 
 defaults
 	log     global
@@ -57,6 +63,10 @@ frontend https-in
 	mode http
 	option httplog
 	bind 0.0.0.0:443 ssl {% for site in haproxy.sites %}crt {{ site.crt }} {% endfor %}no-sslv3
+
+	# Add X-Headers necessary for HTTPS; include:[port] if not running on port 443
+	http-request set-header X-Forwarded-Host %[req.hdr(Host)]
+	http-request set-header X-Forwarded-Proto https
 
 {% for site in haproxy.sites %}
 	use_backend {{ site.name }}{{ site.id }} if { ssl_fc_sni {{ site.url }} } # content switching based on SNI
